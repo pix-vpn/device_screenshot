@@ -33,6 +33,14 @@ abstract class DeviceScreenshotPlatform extends PlatformInterface {
     throw UnimplementedError('takeScreenshot() has not been implemented.');
   }
 
+  Future<Uri?> take({
+    Duration delay = Duration.zero,
+    required int width,
+    required int height
+  }) {
+    throw UnimplementedError('takeScreenshot() has not been implemented.');
+  }
+
   void requestMediaProjection() {
     throw UnimplementedError('requestMediaProjection() has not been implemented.');
   }

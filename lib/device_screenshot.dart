@@ -1,4 +1,6 @@
 
+import 'dart:ui';
+
 import 'device_screenshot_platform_interface.dart';
 
 class DeviceScreenshot {
@@ -14,6 +16,15 @@ class DeviceScreenshot {
     Duration delay = Duration.zero,
   }) {
     return DeviceScreenshotPlatform.instance.takeScreenshot(delay: delay);
+  }
+
+  Future<Uri?> take({
+    Duration delay = Duration.zero,
+    required int width,
+    required int height
+  }) async {
+
+    return DeviceScreenshotPlatform.instance.take(delay: delay, width: width, height: height);
   }
 
   void requestMediaProjection() {

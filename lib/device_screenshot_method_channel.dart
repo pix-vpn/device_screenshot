@@ -26,6 +26,18 @@ class MethodChannelDeviceScreenshot extends DeviceScreenshotPlatform {
   }
 
   @override
+  Future<Uri?> take({
+    Duration delay = Duration.zero,
+    required int width,
+    required int height
+  }) async {
+    await Future.delayed(delay);
+    final uriPath = await methodChannel.invokeMethod<String>('take',{"width":width,"height":height});
+    Uri uri = Uri.file(uriPath ?? '');
+    return uriPath == null ? null : uri;
+  }
+
+  @override
   void requestMediaProjection() async {
     await methodChannel.invokeMethod('requestMediaProjection');
   }

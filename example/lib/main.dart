@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:device_screenshot_example/example_button.dart';
 import 'package:flutter/material.dart';
 
@@ -43,16 +45,20 @@ class _MyAppState extends State<MyApp> {
                 ),
                 ExampleButton(
                   onPressed: () async {
-                    bool mediaProjectionService = await DeviceScreenshot.instance.checkMediaProjectionService();
+                    bool mediaProjectionService = await DeviceScreenshot
+                        .instance
+                        .checkMediaProjectionService();
                     setState(() {
-                      message = 'Media projection service status: $mediaProjectionService';
+                      message =
+                          'Media projection service status: $mediaProjectionService';
                     });
                   },
                   title: 'Check Media Projection Service',
                 ),
                 ExampleButton(
                   onPressed: () async {
-                    if (!await DeviceScreenshot.instance.checkMediaProjectionService()) {
+                    if (!await DeviceScreenshot.instance
+                        .checkMediaProjectionService()) {
                       DeviceScreenshot.instance.requestMediaProjection();
                     }
                   },
@@ -60,7 +66,8 @@ class _MyAppState extends State<MyApp> {
                 ),
                 ExampleButton(
                   onPressed: () async {
-                    if (await DeviceScreenshot.instance.checkMediaProjectionService()) {
+                    if (await DeviceScreenshot.instance
+                        .checkMediaProjectionService()) {
                       DeviceScreenshot.instance.stopMediaProjectionService();
                     }
                   },
@@ -68,7 +75,8 @@ class _MyAppState extends State<MyApp> {
                 ),
                 ExampleButton(
                   onPressed: () async {
-                    Uri? uri = await DeviceScreenshot.instance.takeScreenshot();
+                    Uri? uri = await DeviceScreenshot.instance
+                        .take(width: 1080, height: 2340);
                     if (uri != null) {
                       setState(() {
                         message = uri.path;

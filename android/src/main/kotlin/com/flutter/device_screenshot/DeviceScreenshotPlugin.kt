@@ -35,7 +35,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, PluginRegistry.ActivityResultListener {
+class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
+    PluginRegistry.ActivityResultListener {
     private var context: Context? = null
     private lateinit var channel: MethodChannel
     private var activity: Activity? = null
@@ -87,6 +88,24 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, 
                 })
             }
 
+            "take" -> {
+                val width: Int? = call.argument("width")
+                val height: Int? = call.argument("height")
+                if (height != null) {
+                    if (width != null) {
+                        captureScreen1(width,height,object : ImageAndUriAvailableCallback {
+                            override fun onImageAndUriAvailable(uri: Uri?) {
+                                if (uri != null) {
+                                    result.success(uri.path)
+                                } else {
+                                    result.notImplemented()
+                                }
+                            }
+                        })
+                    }
+                }
+            }
+
             else -> {
                 result.notImplemented()
             }
@@ -125,7 +144,6 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, 
                 null
             )
 
-
             var singleTimeComplete = false
             imageReader.setOnImageAvailableListener(
                 { reader ->
@@ -160,6 +178,70 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, 
                 null,
             )
         } catch (ex: Throwable) {
+            Log.e("take screenshot", "take screenshot error!")
+        }
+    }
+
+
+    @SuppressLint("WrongConstant")
+    private fun captureScreen1(width: Int,height: Int,callback: ImageAndUriAvailableCallback) {
+        try {
+            val metrics = DisplayMetrics()
+            val windowManager = context?.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+
+            windowManager.defaultDisplay.getMetrics(metrics)
+            val density = metrics.densityDpi
+            val width = width
+            val height = height
+
+            val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
+
+            val virtualDisplay = mediaProjection?.createVirtualDisplay(
+                "ScreenCapture",
+                width,
+                height,
+                density,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                imageReader.surface,
+                null,
+                null
+            )
+
+
+            var singleTimeComplete = false
+            imageReader.setOnImageAvailableListener(
+                { reader ->
+                    if (!singleTimeComplete) {
+                        singleTimeComplete = true
+                        val image = reader.acquireLatestImage()
+                        val bitmap = image?.toBitmap()
+
+                        val imageName = "screenshot"
+
+                        val tempFile = File.createTempFile(imageName, ".png")
+                        if(tempFile.exists()){
+                            tempFile.delete();
+                        }
+                        val bytes = ByteArrayOutputStream()
+                        bitmap?.compress(Bitmap.CompressFormat.PNG, 75, bytes)
+                        val bitmapData = bytes.toByteArray()
+
+                        val fileOutPut = FileOutputStream(tempFile)
+                        fileOutPut.write(bitmapData)
+                        fileOutPut.flush()
+                        fileOutPut.close()
+                        val uri = Uri.fromFile(tempFile)
+                        callback.onImageAndUriAvailable(uri)
+
+                        image?.close()
+                        virtualDisplay?.release()
+//                        mediaProjection?.stop()
+                    }
+                },
+                null,
+            )
+        } catch (ex: Throwable) {
+            ex.printStackTrace();
             Log.e("take screenshot", "take screenshot error!")
         }
     }
@@ -228,11 +310,11 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, 
                 } else {
                     val stopIntent = Intent(activity!!, MediaProjectionService::class.java)
                     stopIntent.action = MediaProjectionService.ACTION_STOP_SERVICE
-                    activity?. startService(stopIntent)
+                    activity?.startService(stopIntent)
                     mediaProjection?.stop()
                 }
             }
         }
-        return  false
+        return false
     }
 }
