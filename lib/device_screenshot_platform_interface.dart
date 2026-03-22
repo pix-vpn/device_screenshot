@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'device_screenshot_method_channel.dart';
@@ -47,5 +48,11 @@ abstract class DeviceScreenshotPlatform extends PlatformInterface {
 
   void stopMediaProjectionService() {
     throw UnimplementedError('stopMediaProjectionService() has not been implemented.');
+  }
+
+  Future<Uint8List?> takeScreenshotAsBytes({
+    Duration delay = Duration.zero,
+  }) {
+    throw UnimplementedError('takeScreenshotAsBytes() has not been implemented.');
   }
 }

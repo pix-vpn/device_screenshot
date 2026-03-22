@@ -46,4 +46,13 @@ class MethodChannelDeviceScreenshot extends DeviceScreenshotPlatform {
   void stopMediaProjectionService() async {
     await methodChannel.invokeMethod('stopMediaProjectionService');
   }
+
+  @override
+  Future<Uint8List?> takeScreenshotAsBytes({
+    Duration delay = Duration.zero,
+  }) async {
+    await Future.delayed(delay);
+    final bytes = await methodChannel.invokeMethod<Uint8List>('takeScreenshotAsBytes');
+    return bytes;
+  }
 }

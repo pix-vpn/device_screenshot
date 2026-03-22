@@ -106,6 +106,18 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 }
             }
 
+            "takeScreenshotAsBytes" -> {
+                captureScreenAsBytes(object : ImageBytesAvailableCallback {
+                    override fun onImageBytesAvailable(bytes: ByteArray?) {
+                        if (bytes != null) {
+                            result.success(bytes)
+                        } else {
+                            result.notImplemented()
+                        }
+                    }
+                })
+            }
+
             else -> {
                 result.notImplemented()
             }
@@ -118,6 +130,10 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
     interface ImageAndUriAvailableCallback {
         fun onImageAndUriAvailable(uri: Uri?)
+    }
+
+    interface ImageBytesAvailableCallback {
+        fun onImageBytesAvailable(bytes: ByteArray?)
     }
 
     @SuppressLint("WrongConstant")
@@ -251,10 +267,59 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         val pixelStride: Int = planes[0].pixelStride
         val rowStride: Int = planes[0].rowStride
         val rowPadding: Int = rowStride - pixelStride * width
-        val bitmap =
-            Bitmap.createBitmap(width + rowPadding / pixelStride, height, Bitmap.Config.ARGB_8888)
+        val bitmap = Bitmap.createBitmap(width + rowPadding / pixelStride, height, Bitmap.Config.ARGB_8888)
         bitmap.copyPixelsFromBuffer(buffer)
         return bitmap
+    }
+
+    @SuppressLint("WrongConstant")
+    private fun captureScreenAsBytes(callback: ImageBytesAvailableCallback) {
+        try {
+            val metrics = DisplayMetrics()
+            val windowManager = context?.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+
+            windowManager.defaultDisplay.getMetrics(metrics)
+            val density = metrics.densityDpi
+            val width = metrics.widthPixels
+            val height = metrics.heightPixels
+
+            val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
+
+            val virtualDisplay = mediaProjection?.createVirtualDisplay(
+                "ScreenCapture",
+                width,
+                height,
+                density,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                imageReader.surface,
+                null,
+                null
+            )
+
+            var singleTimeComplete = false
+            imageReader.setOnImageAvailableListener(
+                { reader ->
+                    if (!singleTimeComplete) {
+                        singleTimeComplete = true
+                        val image = reader.acquireLatestImage()
+                        val bitmap = image?.toBitmap()
+
+                        val bytes = ByteArrayOutputStream()
+                        bitmap?.compress(Bitmap.CompressFormat.PNG, 100, bytes)
+                        val bitmapData = bytes.toByteArray()
+
+                        callback.onImageBytesAvailable(bitmapData)
+
+                        image?.close()
+                        virtualDisplay?.release()
+                    }
+                },
+                null,
+            )
+        } catch (ex: Throwable) {
+            ex.printStackTrace()
+            Log.e("take screenshot", "take screenshot error!")
+        }
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {

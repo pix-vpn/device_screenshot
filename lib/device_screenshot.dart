@@ -1,4 +1,5 @@
 
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'device_screenshot_platform_interface.dart';
@@ -33,5 +34,11 @@ class DeviceScreenshot {
 
   void stopMediaProjectionService() {
     DeviceScreenshotPlatform.instance.stopMediaProjectionService();
+  }
+
+  Future<Uint8List?> takeScreenshotAsBytes({
+    Duration delay = Duration.zero,
+  }) {
+    return DeviceScreenshotPlatform.instance.takeScreenshotAsBytes(delay: delay);
   }
 }
