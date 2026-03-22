@@ -166,7 +166,8 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             val metrics = DisplayMetrics()
             val windowManager = context?.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-            windowManager.defaultDisplay.getMetrics(metrics)
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay.getRealMetrics(metrics)
             val density = metrics.densityDpi
             val width = metrics.widthPixels
             val height = metrics.heightPixels
@@ -229,7 +230,8 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             val metrics = DisplayMetrics()
             val windowManager = context?.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-            windowManager.defaultDisplay.getMetrics(metrics)
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay.getRealMetrics(metrics)
             val density = metrics.densityDpi
             val width = width
             val height = height
@@ -288,11 +290,30 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
     private fun Image.toBitmap(): Bitmap {
         val buffer: ByteBuffer = planes[0].buffer
-        val pixelStride: Int = planes[0].pixelStride
         val rowStride: Int = planes[0].rowStride
+        val pixelStride: Int = planes[0].pixelStride
         val rowPadding: Int = rowStride - pixelStride * width
-        val bitmap = Bitmap.createBitmap(width + rowPadding / pixelStride, height, Bitmap.Config.ARGB_8888)
-        bitmap.copyPixelsFromBuffer(buffer)
+        
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        buffer.rewind()
+        
+        if (rowPadding == 0) {
+            bitmap.copyPixelsFromBuffer(buffer)
+        } else {
+            val pixels = IntArray(width * height)
+            for (y in 0 until height) {
+                for (x in 0 until width) {
+                    val position = y * rowStride + x * pixelStride
+                    buffer.position(position)
+                    val r = buffer.get().toInt() and 0xFF
+                    val g = buffer.get().toInt() and 0xFF
+                    val b = buffer.get().toInt() and 0xFF
+                    val a = 0xFF
+                    pixels[y * width + x] = (a shl 24) or (r shl 16) or (g shl 8) or b
+                }
+            }
+            bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+        }
         return bitmap
     }
 
@@ -315,7 +336,8 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             val metrics = DisplayMetrics()
             val windowManager = context?.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-            windowManager.defaultDisplay.getMetrics(metrics)
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay.getRealMetrics(metrics)
             val density = metrics.densityDpi
             val width = metrics.widthPixels
             val height = metrics.heightPixels

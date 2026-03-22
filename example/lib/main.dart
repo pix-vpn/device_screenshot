@@ -141,6 +141,25 @@ class _MyAppState extends State<MyApp> {
                   },
                   title: 'TAKE SCREENSHOT AS BYTES',
                 ),
+                ExampleButton(
+                  onPressed: () async {
+                    final bytes = await DeviceScreenshot.instance
+                        .takeScreenshotInBackground();
+                    if (bytes != null) {
+                      setState(() {
+                        message = 'Background screenshot bytes length: ${bytes.length} bytes';
+                        screenshotBytes = bytes;
+                        screenshotPath = null;
+                      });
+                    } else {
+                      setState(() {
+                        message = 'Background screenshot failed! Please requestMediaProjection first in foreground.';
+                        screenshotBytes = null;
+                      });
+                    }
+                  },
+                  title: 'TAKE SCREENSHOT IN BACKGROUND',
+                ),
               ],
             ),
           ),
