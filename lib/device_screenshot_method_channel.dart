@@ -55,4 +55,10 @@ class MethodChannelDeviceScreenshot extends DeviceScreenshotPlatform {
     final bytes = await methodChannel.invokeMethod<Uint8List>('takeScreenshotAsBytes');
     return bytes;
   }
+
+  @override
+  Future<Uint8List?> takeScreenshotInBackground() async {
+    final bytes = await methodChannel.invokeMethod<Uint8List>('takeScreenshotInBackground');
+    return bytes;
+  }
 }

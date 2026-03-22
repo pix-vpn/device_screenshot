@@ -44,6 +44,18 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     private lateinit var mediaProjectionManager: MediaProjectionManager
     private var mediaProjection: MediaProjection? = null
     private var activityBinding: ActivityPluginBinding? = null
+    private val projectionCallback = object : MediaProjection.Callback() {
+        override fun onStop() {
+            sharedMediaProjection = null
+            mediaProjection = null
+            Log.w("MediaProjection", "Authorization stopped by user or system")
+        }
+    }
+
+    companion object {
+        @Volatile
+        var sharedMediaProjection: MediaProjection? = null
+    }
 
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
@@ -113,6 +125,18 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                             result.success(bytes)
                         } else {
                             result.notImplemented()
+                        }
+                    }
+                })
+            }
+
+            "takeScreenshotInBackground" -> {
+                takeScreenshotInBackground(object : ImageBytesAvailableCallback {
+                    override fun onImageBytesAvailable(bytes: ByteArray?) {
+                        if (bytes != null) {
+                            result.success(bytes)
+                        } else {
+                            result.error("UNAVAILABLE", "MediaProjection not initialized. Please request permission first in foreground.", null)
                         }
                     }
                 })
@@ -274,6 +298,19 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
     @SuppressLint("WrongConstant")
     private fun captureScreenAsBytes(callback: ImageBytesAvailableCallback) {
+        captureScreenAsBytesWithProjection(mediaProjection, callback)
+    }
+
+    @SuppressLint("WrongConstant")
+    private fun captureScreenAsBytesWithProjection(
+        projection: MediaProjection?,
+        callback: ImageBytesAvailableCallback
+    ) {
+        if (projection == null) {
+            callback.onImageBytesAvailable(null)
+            return
+        }
+
         try {
             val metrics = DisplayMetrics()
             val windowManager = context?.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -285,7 +322,7 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
             val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
 
-            val virtualDisplay = mediaProjection?.createVirtualDisplay(
+            val virtualDisplay = projection.createVirtualDisplay(
                 "ScreenCapture",
                 width,
                 height,
@@ -320,6 +357,11 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             ex.printStackTrace()
             Log.e("take screenshot", "take screenshot error!")
         }
+    }
+
+    @SuppressLint("WrongConstant")
+    fun takeScreenshotInBackground(callback: ImageBytesAvailableCallback) {
+        captureScreenAsBytesWithProjection(sharedMediaProjection, callback)
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
@@ -372,6 +414,8 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             requestCodeForegroundService -> {
                 if (resultCode == Activity.RESULT_OK && data != null) {
                     mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data)
+                    mediaProjection?.registerCallback(projectionCallback, null)
+                    sharedMediaProjection = mediaProjection
                 } else {
                     val stopIntent = Intent(activity!!, MediaProjectionService::class.java)
                     stopIntent.action = MediaProjectionService.ACTION_STOP_SERVICE
