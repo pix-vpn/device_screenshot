@@ -42,7 +42,7 @@ class DeviceScreenshot {
     return DeviceScreenshotPlatform.instance.takeScreenshotAsBytes(delay: delay);
   }
 
-  Future<Uint8List?> takeScreenshotInBackground() {
-    return DeviceScreenshotPlatform.instance.takeScreenshotInBackground();
+  Future<Uint8List?> takeScreenshotInBackground({double scale = 1.0}) {
+    return DeviceScreenshotPlatform.instance.takeScreenshotInBackground(scale: scale);
   }
 }

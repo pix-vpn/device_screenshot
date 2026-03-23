@@ -160,6 +160,25 @@ class _MyAppState extends State<MyApp> {
                   },
                   title: 'TAKE SCREENSHOT IN BACKGROUND',
                 ),
+                ExampleButton(
+                  onPressed: () async {
+                    final bytes = await DeviceScreenshot.instance
+                        .takeScreenshotInBackground(scale: 0.5);
+                    if (bytes != null) {
+                      setState(() {
+                        message = 'Background screenshot (scale 0.5) bytes length: ${bytes.length} bytes';
+                        screenshotBytes = bytes;
+                        screenshotPath = null;
+                      });
+                    } else {
+                      setState(() {
+                        message = 'Background screenshot failed! Please requestMediaProjection first in foreground.';
+                        screenshotBytes = null;
+                      });
+                    }
+                  },
+                  title: 'TAKE SCREENSHOT IN BACKGROUND (SCALE 0.5)',
+                ),
               ],
             ),
           ),

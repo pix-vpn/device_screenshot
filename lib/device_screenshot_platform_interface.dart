@@ -56,7 +56,7 @@ abstract class DeviceScreenshotPlatform extends PlatformInterface {
     throw UnimplementedError('takeScreenshotAsBytes() has not been implemented.');
   }
 
-  Future<Uint8List?> takeScreenshotInBackground() {
+  Future<Uint8List?> takeScreenshotInBackground({double scale = 1.0}) {
     throw UnimplementedError('takeScreenshotInBackground() has not been implemented.');
   }
 }

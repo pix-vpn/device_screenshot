@@ -132,7 +132,8 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             }
 
             "takeScreenshotInBackground" -> {
-                takeScreenshotInBackground(object : ImageBytesAvailableCallback {
+                val scale: Double? = call.argument("scale")
+                takeScreenshotInBackground(scale ?: 1.0, object : ImageBytesAvailableCallback {
                     override fun onImageBytesAvailable(bytes: ByteArray?) {
                         if (bytes != null) {
                             result.success(bytes)
@@ -326,7 +327,8 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     @SuppressLint("WrongConstant")
     private fun captureScreenAsBytesWithProjection(
         projection: MediaProjection?,
-        callback: ImageBytesAvailableCallback
+        callback: ImageBytesAvailableCallback,
+        scale: Double = 1.0
     ) {
         if (projection == null) {
             callback.onImageBytesAvailable(null)
@@ -341,8 +343,8 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 @Suppress("DEPRECATION")
                 windowManager.defaultDisplay.getRealMetrics(metrics)
                 val density = metrics.densityDpi
-                val width = metrics.widthPixels
-                val height = metrics.heightPixels
+                val width = (metrics.widthPixels * scale).toInt()
+                val height = (metrics.heightPixels * scale).toInt()
 
                 val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
 
@@ -399,8 +401,8 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     }
 
     @SuppressLint("WrongConstant")
-    fun takeScreenshotInBackground(callback: ImageBytesAvailableCallback) {
-        captureScreenAsBytesWithProjection(sharedMediaProjection, callback)
+    fun takeScreenshotInBackground(scale: Double = 1.0, callback: ImageBytesAvailableCallback) {
+        captureScreenAsBytesWithProjection(sharedMediaProjection, callback, scale)
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
