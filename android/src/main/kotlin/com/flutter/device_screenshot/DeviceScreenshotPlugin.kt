@@ -44,6 +44,7 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     private lateinit var mediaProjectionManager: MediaProjectionManager
     private var mediaProjection: MediaProjection? = null
     private var activityBinding: ActivityPluginBinding? = null
+    private val screenshotLock = Any()
     private val projectionCallback = object : MediaProjection.Callback() {
         override fun onStop() {
             sharedMediaProjection = null
@@ -332,52 +333,68 @@ class DeviceScreenshotPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             return
         }
 
-        try {
-            val metrics = DisplayMetrics()
-            val windowManager = context?.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        synchronized(screenshotLock) {
+            try {
+                val metrics = DisplayMetrics()
+                val windowManager = context?.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-            @Suppress("DEPRECATION")
-            windowManager.defaultDisplay.getRealMetrics(metrics)
-            val density = metrics.densityDpi
-            val width = metrics.widthPixels
-            val height = metrics.heightPixels
+                @Suppress("DEPRECATION")
+                windowManager.defaultDisplay.getRealMetrics(metrics)
+                val density = metrics.densityDpi
+                val width = metrics.widthPixels
+                val height = metrics.heightPixels
 
-            val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
+                val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
 
-            val virtualDisplay = projection.createVirtualDisplay(
-                "ScreenCapture",
-                width,
-                height,
-                density,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                imageReader.surface,
-                null,
-                null
-            )
+                val virtualDisplay = projection.createVirtualDisplay(
+                    "ScreenCapture",
+                    width,
+                    height,
+                    density,
+                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                    imageReader.surface,
+                    null,
+                    null
+                )
 
-            var singleTimeComplete = false
-            imageReader.setOnImageAvailableListener(
-                { reader ->
-                    if (!singleTimeComplete) {
-                        singleTimeComplete = true
-                        val image = reader.acquireLatestImage()
-                        val bitmap = image?.toBitmap()
+                var singleTimeComplete = false
+                imageReader.setOnImageAvailableListener(
+                    { reader ->
+                        if (!singleTimeComplete) {
+                            singleTimeComplete = true
+                            val image = reader.acquireLatestImage()
+                            val bitmap = image?.toBitmap()
 
-                        val bytes = ByteArrayOutputStream()
-                        bitmap?.compress(Bitmap.CompressFormat.PNG, 100, bytes)
-                        val bitmapData = bytes.toByteArray()
+                            val bytes = ByteArrayOutputStream()
+                            bitmap?.compress(Bitmap.CompressFormat.PNG, 100, bytes)
+                            val bitmapData = bytes.toByteArray()
 
-                        callback.onImageBytesAvailable(bitmapData)
+                            callback.onImageBytesAvailable(bitmapData)
 
-                        image?.close()
-                        virtualDisplay?.release()
-                    }
-                },
-                null,
-            )
-        } catch (ex: Throwable) {
-            ex.printStackTrace()
-            Log.e("take screenshot", "take screenshot error!")
+                            try {
+                                image?.close()
+                            } catch (e: Exception) {
+                                Log.e("take screenshot", "Error closing image: $e")
+                            }
+                            try {
+                                virtualDisplay?.release()
+                            } catch (e: Exception) {
+                                Log.e("take screenshot", "Error releasing virtualDisplay: $e")
+                            }
+                            try {
+                                imageReader.close()
+                            } catch (e: Exception) {
+                                Log.e("take screenshot", "Error closing imageReader: $e")
+                            }
+                        }
+                    },
+                    null,
+                )
+            } catch (ex: Throwable) {
+                ex.printStackTrace()
+                Log.e("take screenshot", "take screenshot error!")
+                callback.onImageBytesAvailable(null)
+            }
         }
     }
 
